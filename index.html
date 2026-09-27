@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>אולפן ההקלטות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@600&family=Rubik:wght@400;500;700&display=swap">
+<style>
+  /* The app's own tokens (docs/DESIGN_SYSTEM.md): the recorder reads the same
+     glyphs, in the same face, that the child will. */
+  :root {
+    --ground: #F8FAFC; --surface: #FFFFFF; --ink: #1E293B; --muted: #64748B; --line: #E2E8F0;
+    --sky: #0284C7; --sky-soft: #E0F2FE;
+    --leaf: #15803D; --leaf-soft: #DCFCE7;
+    --sun: #B45309; --sun-soft: #FEF3C7;
+    --rec: #F43F5E; --rec-deep: #BE123C; --rec-soft: #FFE4E6;
+    --on-accent: #FFFFFF;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1220; --surface: #131C2E; --ink: #F1F5F9; --muted: #94A3B8; --line: #243044;
+      --sky: #38BDF8; --sky-soft: #0C2A3D;
+      --leaf: #4ADE80; --leaf-soft: #0F2E1D;
+      --sun: #FBBF24; --sun-soft: #33260A;
+      --rec: #FB7185; --rec-deep: #F43F5E; --rec-soft: #3A1520;
+      --on-accent: #0B1220;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1220; --surface: #131C2E; --ink: #F1F5F9; --muted: #94A3B8; --line: #243044;
+    --sky: #38BDF8; --sky-soft: #0C2A3D;
+    --leaf: #4ADE80; --leaf-soft: #0F2E1D;
+    --sun: #FBBF24; --sun-soft: #33260A;
+    --rec: #FB7185; --rec-deep: #F43F5E; --rec-soft: #3A1520;
+    --on-accent: #0B1220;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 400 17px/1.55 Rubik, "Arial Hebrew", Arial, sans-serif;
+  }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+  /* ---- top bar: where you are, what is waiting to be sent ---- */
+  .bar {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--surface); border-block-end: 1px solid var(--line);
+    padding-block-start: env(safe-area-inset-top, 0px);
+  }
+  .bar-in {
+    max-width: 44rem; margin-inline: auto; padding: .7rem 16px;
+    display: flex; align-items: center; gap: .8rem;
+  }
+  .brand { display: flex; align-items: center; gap: .55rem; flex: 1; min-width: 0; }
+  .brand h1 { font-size: 1.05rem; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .on-air { inline-size: .7rem; block-size: .7rem; border-radius: 50%; background: var(--line); flex: none; }
+  .on-air.live { background: var(--rec); box-shadow: 0 0 0 4px var(--rec-soft); }
+  .count { font-size: .9rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .track { block-size: 4px; background: var(--line); }
+  .track > div { block-size: 100%; inline-size: 0; background: var(--leaf); transition: inline-size .3s; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+    padding: .55rem 1.1rem; min-block-size: 2.9rem; font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  }
+  .btn.primary { background: var(--sky); border-color: var(--sky); color: var(--on-accent); }
+  .btn.send { background: var(--leaf); border-color: var(--leaf); color: var(--on-accent); }
+  .btn.send[disabled] { background: var(--surface); border-color: var(--line); color: var(--muted); cursor: default; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .badge {
+    min-inline-size: 1.5rem; padding-inline: .35rem; border-radius: 999px; font-size: .8rem;
+    background: color-mix(in srgb, var(--on-accent) 25%, transparent); font-variant-numeric: tabular-nums;
+  }
+
+  .wrap { max-width: 44rem; margin-inline: auto; padding: 1.1rem 16px 4rem; display: flex; flex-direction: column; gap: 1.1rem; }
+  .intro { margin: 0; color: var(--muted); }
+  .how { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: .8rem 1rem; }
+  .how summary { font-weight: 700; cursor: pointer; }
+  .how ol { margin: .6rem 0 0; padding-inline-start: 1.3rem; display: flex; flex-direction: column; gap: .35rem; }
+  .how .heb { font-family: "Noto Sans Hebrew", "Arial Hebrew", sans-serif; font-weight: 600; font-size: 1.15em; }
+  .banner { margin: 0; padding: .7rem 1rem; border-radius: 12px; background: var(--sun-soft); color: var(--ink); }
+
+  /* ---- the booth: one line at a time ---- */
+  .booth {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    padding: 1rem 1rem 1.3rem; display: flex; flex-direction: column; align-items: center; gap: .6rem;
+  }
+  .booth-top { align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .eyebrow { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pill { font-size: .8rem; font-weight: 500; padding: .15rem .6rem; border-radius: 999px; background: var(--line); color: var(--ink); }
+  .pill[data-status="kept"] { background: var(--sky-soft); color: var(--sky); }
+  .pill[data-status="done"] { background: var(--leaf-soft); color: var(--leaf); }
+  .pill[data-status="changed"], .pill[data-status="redo"] { background: var(--sun-soft); color: var(--sun); }
+  .item {
+    margin: .2rem 0 0; text-align: center; line-height: 1.5; overflow-wrap: anywhere;
+    font-family: "Noto Sans Hebrew", "Arial Hebrew", sans-serif; font-weight: 600;
+    font-size: clamp(88px, 28vw, 150px);
+  }
+  .item[data-len="medium"] { font-size: clamp(52px, 15vw, 92px); }
+  .item[data-len="long"] { font-size: clamp(28px, 7.5vw, 44px); text-wrap: balance; }
+  .aids { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .4rem .8rem; color: var(--muted); }
+  .aids .emoji { font-size: 1.6rem; line-height: 1; }
+  .aids .gloss-he { font-family: "Noto Sans Hebrew", "Arial Hebrew", sans-serif; font-weight: 600; color: var(--ink); }
+  .ipa { font-family: ui-monospace, Menlo, monospace; font-size: .95rem; }
+  .addr { background: var(--sky-soft); color: var(--sky); }
+  .note { margin: 0; padding: .5rem .9rem; border-radius: 10px; background: var(--sun-soft); text-align: center; }
+  .hint { margin: 0; color: var(--muted); text-align: center; font-size: .95rem; max-inline-size: 34ch; }
+
+  .deck { display: flex; align-items: center; justify-content: center; gap: 1.2rem; margin-block-start: .4rem; }
+  .rec {
+    inline-size: 6.5rem; block-size: 6.5rem; border-radius: 50%; border: 0; position: relative;
+    background: var(--rec); display: grid; place-items: center;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--rec) 35%, transparent);
+  }
+  .rec-core { inline-size: 2.1rem; block-size: 2.1rem; border-radius: 50%; background: var(--on-accent); transition: border-radius .15s, inline-size .15s, block-size .15s; }
+  .rec[aria-pressed="true"] .rec-core { border-radius: 7px; inline-size: 1.8rem; block-size: 1.8rem; }
+  .rec[aria-pressed="true"]::after {
+    content: ""; position: absolute; inset: -8px; border-radius: 50%;
+    border: 3px solid var(--rec); animation: pulse 1.2s ease-out infinite;
+  }
+  @keyframes pulse { from { opacity: .9; transform: scale(.94); } to { opacity: 0; transform: scale(1.12); } }
+  @media (prefers-reduced-motion: reduce) { .rec[aria-pressed="true"]::after { animation: none; opacity: .6; } }
+  .rec-label { font-weight: 700; color: var(--rec-deep); }
+  .level { inline-size: min(16rem, 100%); block-size: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .level > div { block-size: 100%; inline-size: 0; background: var(--leaf); }
+  .warn { margin: 0; color: var(--sun); font-weight: 500; text-align: center; }
+  .review { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; }
+  .sendbox { display: flex; flex-direction: column; gap: .5rem; align-items: stretch; background: var(--leaf-soft); border-radius: 14px; padding: .9rem 1rem; }
+  .sendbox p { margin: 0; font-size: .92rem; }
+  .sendbox .again { align-self: start; font-size: .9rem; color: var(--leaf); background: none; border: 0; padding: 0; text-decoration: underline; }
+
+  /* ---- the whole script, by section ---- */
+  .list-head { display: flex; justify-content: flex-end; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: .35rem .9rem; font-size: .9rem; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+  .group { display: flex; flex-direction: column; gap: .5rem; }
+  .group h2 { margin: .4rem 0 0; font-size: 1rem; display: flex; align-items: baseline; gap: .6rem; }
+  .group h2 .count { font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .chip {
+    min-inline-size: 3rem; min-block-size: 3rem; padding: .2rem .7rem; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--surface);
+    font-family: "Noto Sans Hebrew", "Arial Hebrew", sans-serif; font-weight: 600; font-size: 1.3rem;
+  }
+  .chip.long { font-size: .95rem; }
+  .chip[data-status="kept"] { background: var(--sky-soft); border-color: transparent; }
+  .chip[data-status="done"] { background: var(--leaf-soft); border-color: transparent; color: var(--leaf); }
+  .chip[data-status="changed"], .chip[data-status="redo"] { background: var(--sun-soft); border-color: var(--sun); }
+  .chip[aria-current="true"] { outline: 3px solid var(--ink); outline-offset: 1px; }
+  .done-all { margin: 0; color: var(--leaf); font-weight: 500; }
+
+  .toast {
+    position: fixed; inset-inline: 16px; inset-block-end: calc(16px + env(safe-area-inset-bottom, 0px));
+    margin: 0 auto; max-inline-size: 30rem; padding: .8rem 1rem; border-radius: 14px;
+    background: var(--ink); color: var(--ground); text-align: center; z-index: 10;
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><span id="on-air" class="on-air" aria-hidden="true"></span><h1 id="title"></h1></div>
+    <span id="progress" class="count"></span>
+    <button id="send" class="btn send" data-testid="send"><span id="send-label"></span><span id="send-count" class="badge"></span></button>
+  </div>
+  <div class="track"><div id="track-fill"></div></div>
+</header>
+
+<main class="wrap">
+  <p id="intro" class="intro"></p>
+  <details id="how" class="how"><summary id="how-title"></summary><ol id="how-list"></ol></details>
+  <p id="banner" class="banner" role="alert" hidden></p>
+
+  <section class="booth" aria-live="polite">
+    <div class="booth-top"><span id="eyebrow" class="eyebrow"></span><span id="pill" class="pill" data-testid="status"></span></div>
+    <p id="item" class="item" data-testid="item"></p>
+    <div class="aids">
+      <span id="emoji" class="emoji"></span>
+      <span id="gloss"></span>
+      <bdi id="ipa" class="ipa" dir="ltr"></bdi>
+      <span id="addr" class="pill addr"></span>
+    </div>
+    <p id="note" class="note"></p>
+    <p id="hint" class="hint"></p>
+    <div class="deck">
+      <button id="prev" class="btn ghost"></button>
+      <button id="rec" class="rec" aria-pressed="false" data-testid="record"><span class="rec-core"></span></button>
+      <button id="skip" class="btn ghost"></button>
+    </div>
+    <span id="rec-label" class="rec-label"></span>
+    <div class="level" aria-hidden="true"><div id="level-fill"></div></div>
+    <p id="warn" class="warn"></p>
+    <div id="review" class="review">
+      <button id="again" class="btn" data-testid="again"></button>
+      <button id="play" class="btn" data-testid="play"></button>
+      <button id="keep" class="btn primary" data-testid="keep"></button>
+    </div>
+  </section>
+
+  <div id="sendbox" class="sendbox">
+    <p id="send-note"></p>
+    <button id="send-all" class="again" data-testid="send-all"></button>
+  </div>
+
+  <section class="list">
+    <div class="list-head">
+      <div class="seg" role="group">
+        <button id="f-left" aria-pressed="true"></button>
+        <button id="f-all" aria-pressed="false" data-testid="filter-all"></button>
+      </div>
+    </div>
+    <div id="groups"></div>
+  </section>
+</main>
+<p id="toast" class="toast" role="status" hidden></p>
+
+<script id="strings" type="application/json">{"docTitle":"אולפן ההקלטות","intro":"כל שורה כאן היא הקלטה קצרה אחת למשחק שמלמד ילדים לקרוא. ההקלטות נשמרות בטלפון שלך עד שתשלח אותן.","howTitle":"איך מקליטים","how":["מקום שקט, והטלפון במרחק כף יד מהפה.","אומרים רק את מה שכתוב באותיות הגדולות. בלי מספרים ובלי \"אוקיי, הבא\".","הברה היא צליל ולא שם של אות: את {syllable} אומרים כמו בתחילת {anchor}, ולא \"{letterName}\".","לא יצא טוב? לוחצים \"שוב\". רק ההקלטה האחרונה נשמרת.","אפשר לעצור בכל רגע ולהמשיך אחר כך. כדאי לשלוח בסוף כל חלק."],"categories":{"syllables":"הברות","letters":"שמות האותיות","anchors":"מילה לכל אות","words":"מילים","praise":"משפטי עידוד והוראות","regions":"שמות המקומות במפה"},"hints":{"syllables":"רק הצליל, קצר ונקי. בערך חצי שנייה.","letters":"השם של האות, כמו שאומרים אותו בגן.","anchors":"המילה כולה, בדיבור רגיל.","words":"המילה כולה, בדיבור רגיל.","praise":"בחום, כמו שמדברים לילד קטן. חלק מהמשפטים מופיעים פעמיים: פעם לילד ופעם לילדה.","regions":"שם המקום, בדיבור רגיל."},"address":{"m":"פונים לילד","f":"פונים לילדה"},"status":{"todo":"עוד לא הוקלט","changed":"הטקסט השתנה, צריך להקליט שוב","redo":"ביקשו להקליט שוב","kept":"מחכה לשליחה","done":"הוקלט ונשלח"},"record":"הקלטה","stop":"עצירה","recording":"מקליט…","again":"שוב","play":"השמעה","keep":"שמירה והבא","prev":"הקודם","skip":"דילוג","send":"שליחה","sendAll":"לשלוח שוב את כל ההקלטות","sendNote":"נפתח חלון שיתוף: בוחרים וואטסאפ ושולחים לבן. אם וואטסאפ לא מופיע, שומרים את הקובץ ומצרפים אותו בוואטסאפ כמסמך.","sentShare":"סומן כנשלח.","sentDownload":"הקובץ נשמר. עכשיו מצרפים אותו בוואטסאפ כמסמך ושולחים לבן.","nothingToSend":"אין הקלטות חדשות לשליחה.","progress":"{done} מתוך {total}","waiting":"{n} מחכות לשליחה","position":"{i} מתוך {n}","filterLeft":"רק מה שנשאר","filterAll":"הכול","allDone":"הכול הוקלט. נשאר רק לשלוח.","tooLoud":"חזק מדי. כדאי להתרחק קצת מהטלפון ולהקליט שוב.","tooQuiet":"שקט מדי. כדאי להתקרב קצת ולהקליט שוב.","micDenied":"אין גישה למיקרופון. צריך לאשר גישה בדפדפן ולנסות שוב.","micMissing":"הדפדפן הזה לא יכול להקליט. אפשר לפתוח את הקישור בכרום או בספארי.","noStorage":"הדפדפן הזה לא שומר את ההקלטות בין ביקורים. כדאי לשלוח בסוף כל חלק.","note":"הערה:"}</script>
+<script id="studio" type="application/json">{"version":"2026-09-27 15:04 27c230e","examples":{"syllable":"בַּ","anchor":"בַּיִת","letterName":"בֵּית"},"clips":[{"id":"syllables/alef-kamatz","cat":"syllables","text":"אָ","hash":"2a73887d8f53","status":"todo","ipa":"ʔˈa","gloss":"אָלֶף + קָמָץ"},{"id":"syllables/alef-patach","cat":"syllables","text":"אַ","hash":"7d989155379f","status":"todo","ipa":"ʔˈa","gloss":"אָלֶף + פַּתָח"},{"id":"syllables/alef-chirik","cat":"syllables","text":"אִ","hash":"cb60d83475ea","status":"todo","ipa":"ʔˈi","gloss":"אָלֶף + חִירִיק"},{"id":"syllables/alef-segol","cat":"syllables","text":"אֶ","hash":"2e898b6f234a","status":"todo","ipa":"ʔˈe","gloss":"אָלֶף + סֶגּוֹל"},{"id":"syllables/alef-tzere","cat":"syllables","text":"אֵ","hash":"3ce74a2ad35e","status":"todo","ipa":"ʔˈe","gloss":"אָלֶף + צֵירֵה"},{"id":"syllables/alef-cholam","cat":"syllables","text":"אוֹ","hash":"9ef57af756fb","status":"todo","ipa":"ʔˈo","gloss":"אָלֶף + חוֹלָם"},{"id":"syllables/alef-shuruk","cat":"syllables","text":"אוּ","hash":"56e8723fa2b2","status":"todo","ipa":"ʔˈu","gloss":"אָלֶף + שׁוּרוּק"},{"id":"syllables/alef-kubutz","cat":"syllables","text":"אֻ","hash":"53ea18aa8cab","status":"todo","ipa":"ʔˈu","gloss":"אָלֶף + קֻבּוּץ"},{"id":"syllables/bet-kamatz","cat":"syllables","text":"בָּ","hash":"ea2bbf5044fb","status":"todo","ipa":"bˈa","gloss":"בֵּית + קָמָץ"},{"id":"syllables/bet-patach","cat":"syllables","text":"בַּ","hash":"6f9bd8c0627a","status":"todo","ipa":"bˈa","gloss":"בֵּית + פַּתָח"},{"id":"syllables/bet-chirik","cat":"syllables","text":"בִּ","hash":"b76fc66bfbf4","status":"todo","ipa":"bˈi","gloss":"בֵּית + חִירִיק"},{"id":"syllables/bet-segol","cat":"syllables","text":"בֶּ","hash":"91ff3e155f81","status":"todo","ipa":"bˈe","gloss":"בֵּית + סֶגּוֹל"},{"id":"syllables/bet-tzere","cat":"syllables","text":"בֵּ","hash":"5c2d9f95cd2e","status":"todo","ipa":"bˈe","gloss":"בֵּית + צֵירֵה"},{"id":"syllables/bet-cholam","cat":"syllables","text":"בּוֹ","hash":"2e3828a7c547","status":"todo","ipa":"bˈo","gloss":"בֵּית + חוֹלָם"},{"id":"syllables/bet-shuruk","cat":"syllables","text":"בּוּ","hash":"1a47df36aca9","status":"todo","ipa":"bˈu","gloss":"בֵּית + שׁוּרוּק"},{"id":"syllables/bet-kubutz","cat":"syllables","text":"בֻּ","hash":"546798f621ae","status":"todo","ipa":"bˈu","gloss":"בֵּית + קֻבּוּץ"},{"id":"syllables/gimel-kamatz","cat":"syllables","text":"גָּ","hash":"7280aa92dbff","status":"todo","ipa":"ɡˈa","gloss":"גִּימֶל + קָמָץ"},{"id":"syllables/gimel-patach","cat":"syllables","text":"גַּ","hash":"a95bdd00ccf3","status":"todo","ipa":"ɡˈa","gloss":"גִּימֶל + פַּתָח"},{"id":"syllables/gimel-chirik","cat":"syllables","text":"גִּ","hash":"3ce13754d00c","status":"todo","ipa":"ɡˈi","gloss":"גִּימֶל + חִירִיק"},{"id":"syllables/gimel-segol","cat":"syllables","text":"גֶּ","hash":"a52154b74d3b","status":"todo","ipa":"ɡˈe","gloss":"גִּימֶל + סֶגּוֹל"},{"id":"syllables/gimel-tzere","cat":"syllables","text":"גֵּ","hash":"33b792524973","status":"todo","ipa":"ɡˈe","gloss":"גִּימֶל + צֵירֵה"},{"id":"syllables/gimel-cholam","cat":"syllables","text":"גּוֹ","hash":"e194e997b429","status":"todo","ipa":"ɡˈo","gloss":"גִּימֶל + חוֹלָם"},{"id":"syllables/gimel-shuruk","cat":"syllables","text":"גּוּ","hash":"dbc80cf208f6","status":"todo","ipa":"ɡˈu","gloss":"גִּימֶל + שׁוּרוּק"},{"id":"syllables/gimel-kubutz","cat":"syllables","text":"גֻּ","hash":"0025a885ed47","status":"todo","ipa":"ɡˈu","gloss":"גִּימֶל + קֻבּוּץ"},{"id":"syllables/dalet-kamatz","cat":"syllables","text":"דָּ","hash":"34adf2bfd685","status":"todo","ipa":"dˈa","gloss":"דָּלֶת + קָמָץ"},{"id":"syllables/dalet-patach","cat":"syllables","text":"דַּ","hash":"e7961f7061ad","status":"todo","ipa":"dˈa","gloss":"דָּלֶת + פַּתָח"},{"id":"syllables/dalet-chirik","cat":"syllables","text":"דִּ","hash":"6d75c080f6ee","status":"todo","ipa":"dˈi","gloss":"דָּלֶת + חִירִיק"},{"id":"syllables/dalet-segol","cat":"syllables","text":"דֶּ","hash":"c6fabe62a6bd","status":"todo","ipa":"dˈe","gloss":"דָּלֶת + סֶגּוֹל"},{"id":"syllables/dalet-tzere","cat":"syllables","text":"דֵּ","hash":"d375d2f245a2","status":"todo","ipa":"dˈe","gloss":"דָּלֶת + צֵירֵה"},{"id":"syllables/dalet-cholam","cat":"syllables","text":"דּוֹ","hash":"ca5a7ef1adc2","status":"todo","ipa":"dˈo","gloss":"דָּלֶת + חוֹלָם"},{"id":"syllables/dalet-shuruk","cat":"syllables","text":"דּוּ","hash":"0c345869a320","status":"todo","ipa":"dˈu","gloss":"דָּלֶת + שׁוּרוּק"},{"id":"syllables/dalet-kubutz","cat":"syllables","text":"דֻּ","hash":"f3e9f1e0911f","status":"todo","ipa":"dˈu","gloss":"דָּלֶת + קֻבּוּץ"},{"id":"syllables/he-kamatz","cat":"syllables","text":"הָ","hash":"b68a0ca81846","status":"todo","ipa":"hˈa","gloss":"הֵא + קָמָץ"},{"id":"syllables/he-patach","cat":"syllables","text":"הַ","hash":"6d3868b84ca3","status":"todo","ipa":"hˈa","gloss":"הֵא + פַּתָח"},{"id":"syllables/he-chirik","cat":"syllables","text":"הִ","hash":"85afc57bd0b6","status":"todo","ipa":"hˈi","gloss":"הֵא + חִירִיק"},{"id":"syllables/he-segol","cat":"syllables","text":"הֶ","hash":"0064abb546bc","status":"todo","ipa":"hˈe","gloss":"הֵא + סֶגּוֹל"},{"id":"syllables/he-tzere","cat":"syllables","text":"הֵ","hash":"e5f401c46dc3","status":"todo","ipa":"hˈe","gloss":"הֵא + צֵירֵה"},{"id":"syllables/he-cholam","cat":"syllables","text":"הוֹ","hash":"f058ad2351b5","status":"todo","ipa":"hˈo","gloss":"הֵא + חוֹלָם"},{"id":"syllables/he-shuruk","cat":"syllables","text":"הוּ","hash":"31bf7079d419","status":"todo","ipa":"hˈu","gloss":"הֵא + שׁוּרוּק"},{"id":"syllables/he-kubutz","cat":"syllables","text":"הֻ","hash":"482bfcf63679","status":"todo","ipa":"hˈu","gloss":"הֵא + קֻבּוּץ"},{"id":"syllables/vav-kamatz","cat":"syllables","text":"וָ","hash":"9ff735421c67","status":"todo","ipa":"vˈa","gloss":"וָו + קָמָץ"},{"id":"syllables/vav-patach","cat":"syllables","text":"וַ","hash":"cec45bf03cf0","status":"todo","ipa":"vˈa","gloss":"וָו + פַּתָח"},{"id":"syllables/vav-chirik","cat":"syllables","text":"וִ","hash":"6f1a1ee4dd08","status":"todo","ipa":"vˈi","gloss":"וָו + חִירִיק"},{"id":"syllables/vav-segol","cat":"syllables","text":"וֶ","hash":"468e6f2fe29d","status":"todo","ipa":"vˈe","gloss":"וָו + סֶגּוֹל"},{"id":"syllables/vav-tzere","cat":"syllables","text":"וֵ","hash":"a51b381ee854","status":"todo","ipa":"vˈe","gloss":"וָו + צֵירֵה"},{"id":"syllables/vav-cholam","cat":"syllables","text":"ווֹ","hash":"57095a146c49","status":"todo","ipa":"vˈo","gloss":"וָו + חוֹלָם"},{"id":"syllables/vav-shuruk","cat":"syllables","text":"ווּ","hash":"abd29d296c2b","status":"todo","ipa":"vˈu","gloss":"וָו + שׁוּרוּק"},{"id":"syllables/vav-kubutz","cat":"syllables","text":"וֻ","hash":"59ea832df0e3","status":"todo","ipa":"vˈu","gloss":"וָו + קֻבּוּץ"},{"id":"syllables/zayin-kamatz","cat":"syllables","text":"זָ","hash":"5d5ec1e88e63","status":"todo","ipa":"zˈa","gloss":"זַיִן + קָמָץ"},{"id":"syllables/zayin-patach","cat":"syllables","text":"זַ","hash":"d3784054945b","status":"todo","ipa":"zˈa","gloss":"זַיִן + פַּתָח"},{"id":"syllables/zayin-chirik","cat":"syllables","text":"זִ","hash":"851735c1f96a","status":"todo","ipa":"zˈi","gloss":"זַיִן + חִירִיק"},{"id":"syllables/zayin-segol","cat":"syllables","text":"זֶ","hash":"89f3a06cf9c4","status":"todo","ipa":"zˈe","gloss":"זַיִן + סֶגּוֹל"},{"id":"syllables/zayin-tzere","cat":"syllables","text":"זֵ","hash":"d0ee09666475","status":"todo","ipa":"zˈe","gloss":"זַיִן + צֵירֵה"},{"id":"syllables/zayin-cholam","cat":"syllables","text":"זוֹ","hash":"e185b6ad307f","status":"todo","ipa":"zˈo","gloss":"זַיִן + חוֹלָם"},{"id":"syllables/zayin-shuruk","cat":"syllables","text":"זוּ","hash":"7cd86dfe4fb5","status":"todo","ipa":"zˈu","gloss":"זַיִן + שׁוּרוּק"},{"id":"syllables/zayin-kubutz","cat":"syllables","text":"זֻ","hash":"49715766a4b9","status":"todo","ipa":"zˈu","gloss":"זַיִן + קֻבּוּץ"},{"id":"syllables/chet-kamatz","cat":"syllables","text":"חָ","hash":"c34b3633fe35","status":"todo","ipa":"χˈa","gloss":"חֵית + קָמָץ"},{"id":"syllables/chet-patach","cat":"syllables","text":"חַ","hash":"44ed6f109728","status":"todo","ipa":"χˈa","gloss":"חֵית + פַּתָח"},{"id":"syllables/chet-chirik","cat":"syllables","text":"חִ","hash":"be9106016e4e","status":"todo","ipa":"χˈi","gloss":"חֵית + חִירִיק"},{"id":"syllables/chet-segol","cat":"syllables","text":"חֶ","hash":"915fe127c7b2","status":"todo","ipa":"χˈe","gloss":"חֵית + סֶגּוֹל"},{"id":"syllables/chet-tzere","cat":"syllables","text":"חֵ","hash":"27f9578a071c","status":"todo","ipa":"χˈe","gloss":"חֵית + צֵירֵה"},{"id":"syllables/chet-cholam","cat":"syllables","text":"חוֹ","hash":"421a52fc85c1","status":"todo","ipa":"χˈo","gloss":"חֵית + חוֹלָם"},{"id":"syllables/chet-shuruk","cat":"syllables","text":"חוּ","hash":"f09a16c76c66","status":"todo","ipa":"χˈu","gloss":"חֵית + שׁוּרוּק"},{"id":"syllables/chet-kubutz","cat":"syllables","text":"חֻ","hash":"adce48c524bd","status":"todo","ipa":"χˈu","gloss":"חֵית + קֻבּוּץ"},{"id":"syllables/tet-kamatz","cat":"syllables","text":"טָ","hash":"617362efb364","status":"todo","ipa":"tˈa","gloss":"טֵית + קָמָץ"},{"id":"syllables/tet-patach","cat":"syllables","text":"טַ","hash":"c37fbf4401b6","status":"todo","ipa":"tˈa","gloss":"טֵית + פַּתָח"},{"id":"syllables/tet-chirik","cat":"syllables","text":"טִ","hash":"65a0befdd77d","status":"todo","ipa":"tˈi","gloss":"טֵית + חִירִיק"},{"id":"syllables/tet-segol","cat":"syllables","text":"טֶ","hash":"ba7115652d47","status":"todo","ipa":"tˈe","gloss":"טֵית + סֶגּוֹל"},{"id":"syllables/tet-tzere","cat":"syllables","text":"טֵ","hash":"a0b73aab4485","status":"todo","ipa":"tˈe","gloss":"טֵית + צֵירֵה"},{"id":"syllables/tet-cholam","cat":"syllables","text":"טוֹ","hash":"d37605f36e2a","status":"todo","ipa":"tˈo","gloss":"טֵית + חוֹלָם"},{"id":"syllables/tet-shuruk","cat":"syllables","text":"טוּ","hash":"73c21cd0983b","status":"todo","ipa":"tˈu","gloss":"טֵית + שׁוּרוּק"},{"id":"syllables/tet-kubutz","cat":"syllables","text":"טֻ","hash":"5405a53658bd","status":"todo","ipa":"tˈu","gloss":"טֵית + קֻבּוּץ"},{"id":"syllables/yod-kamatz","cat":"syllables","text":"יָ","hash":"88a44d52dd1c","status":"todo","ipa":"jˈa","gloss":"יוֹד + קָמָץ"},{"id":"syllables/yod-patach","cat":"syllables","text":"יַ","hash":"2acd3a4424a2","status":"todo","ipa":"jˈa","gloss":"יוֹד + פַּתָח"},{"id":"syllables/yod-chirik","cat":"syllables","text":"יִ","hash":"dd20467ede94","status":"todo","ipa":"jˈi","gloss":"יוֹד + חִירִיק"},{"id":"syllables/yod-segol","cat":"syllables","text":"יֶ","hash":"dd1045bfccf0","status":"todo","ipa":"jˈe","gloss":"יוֹד + סֶגּוֹל"},{"id":"syllables/yod-tzere","cat":"syllables","text":"יֵ","hash":"5f9b27f8f6da","status":"todo","ipa":"jˈe","gloss":"יוֹד + צֵירֵה"},{"id":"syllables/yod-cholam","cat":"syllables","text":"יוֹ","hash":"44aaa9ec6465","status":"todo","ipa":"jˈo","gloss":"יוֹד + חוֹלָם"},{"id":"syllables/yod-shuruk","cat":"syllables","text":"יוּ","hash":"52fe44d9ae2a","status":"todo","ipa":"jˈu","gloss":"יוֹד + שׁוּרוּק"},{"id":"syllables/yod-kubutz","cat":"syllables","text":"יֻ","hash":"b2f9ba7056a4","status":"todo","ipa":"jˈu","gloss":"יוֹד + קֻבּוּץ"},{"id":"syllables/kaf-kamatz","cat":"syllables","text":"כָּ","hash":"7e8dfffea609","status":"todo","ipa":"kˈa","gloss":"כַּף + קָמָץ"},{"id":"syllables/kaf-patach","cat":"syllables","text":"כַּ","hash":"99ec5254e2ce","status":"todo","ipa":"kˈa","gloss":"כַּף + פַּתָח"},{"id":"syllables/kaf-chirik","cat":"syllables","text":"כִּ","hash":"200403cdf248","status":"todo","ipa":"kˈi","gloss":"כַּף + חִירִיק"},{"id":"syllables/kaf-segol","cat":"syllables","text":"כֶּ","hash":"82b1aeda62ef","status":"todo","ipa":"kˈe","gloss":"כַּף + סֶגּוֹל"},{"id":"syllables/kaf-tzere","cat":"syllables","text":"כֵּ","hash":"16ed0240defb","status":"todo","ipa":"kˈe","gloss":"כַּף + צֵירֵה"},{"id":"syllables/kaf-cholam","cat":"syllables","text":"כּוֹ","hash":"dc517d72ea40","status":"todo","ipa":"kˈo","gloss":"כַּף + חוֹלָם"},{"id":"syllables/kaf-shuruk","cat":"syllables","text":"כּוּ","hash":"06f452be8749","status":"todo","ipa":"kˈu","gloss":"כַּף + שׁוּרוּק"},{"id":"syllables/kaf-kubutz","cat":"syllables","text":"כֻּ","hash":"3b777cfa5fdf","status":"todo","ipa":"kˈu","gloss":"כַּף + קֻבּוּץ"},{"id":"syllables/lamed-kamatz","cat":"syllables","text":"לָ","hash":"7af1d6baecdb","status":"todo","ipa":"lˈa","gloss":"לָמֶד + קָמָץ"},{"id":"syllables/lamed-patach","cat":"syllables","text":"לַ","hash":"c0f0799ca571","status":"todo","ipa":"lˈa","gloss":"לָמֶד + פַּתָח"},{"id":"syllables/lamed-chirik","cat":"syllables","text":"לִ","hash":"fd8fabb2174c","status":"todo","ipa":"lˈi","gloss":"לָמֶד + חִירִיק"},{"id":"syllables/lamed-segol","cat":"syllables","text":"לֶ","hash":"1029e05921a6","status":"todo","ipa":"lˈe","gloss":"לָמֶד + סֶגּוֹל"},{"id":"syllables/lamed-tzere","cat":"syllables","text":"לֵ","hash":"e508f7a99790","status":"todo","ipa":"lˈe","gloss":"לָמֶד + צֵירֵה"},{"id":"syllables/lamed-cholam","cat":"syllables","text":"לוֹ","hash":"987a33d9302d","status":"todo","ipa":"lˈo","gloss":"לָמֶד + חוֹלָם"},{"id":"syllables/lamed-shuruk","cat":"syllables","text":"לוּ","hash":"702c73659802","status":"todo","ipa":"lˈu","gloss":"לָמֶד + שׁוּרוּק"},{"id":"syllables/lamed-kubutz","cat":"syllables","text":"לֻ","hash":"8caa96f57ba2","status":"todo","ipa":"lˈu","gloss":"לָמֶד + קֻבּוּץ"},{"id":"syllables/mem-kamatz","cat":"syllables","text":"מָ","hash":"083ef3064d5a","status":"todo","ipa":"mˈa","gloss":"מֵם + קָמָץ"},{"id":"syllables/mem-patach","cat":"syllables","text":"מַ","hash":"cdc46290bcd4","status":"todo","ipa":"mˈa","gloss":"מֵם + פַּתָח"},{"id":"syllables/mem-chirik","cat":"syllables","text":"מִ","hash":"792d46f6853a","status":"todo","ipa":"mˈi","gloss":"מֵם + חִירִיק"},{"id":"syllables/mem-segol","cat":"syllables","text":"מֶ","hash":"769b1e4447f6","status":"todo","ipa":"mˈe","gloss":"מֵם + סֶגּוֹל"},{"id":"syllables/mem-tzere","cat":"syllables","text":"מֵ","hash":"7f41f7ac19ee","status":"todo","ipa":"mˈe","gloss":"מֵם + צֵירֵה"},{"id":"syllables/mem-cholam","cat":"syllables","text":"מוֹ","hash":"a0105ed14938","status":"todo","ipa":"mˈo","gloss":"מֵם + חוֹלָם"},{"id":"syllables/mem-shuruk","cat":"syllables","text":"מוּ","hash":"4bf273e57fe0","status":"todo","ipa":"mˈu","gloss":"מֵם + שׁוּרוּק"},{"id":"syllables/mem-kubutz","cat":"syllables","text":"מֻ","hash":"d0cb47037ff0","status":"todo","ipa":"mˈu","gloss":"מֵם + קֻבּוּץ"},{"id":"syllables/nun-kamatz","cat":"syllables","text":"נָ","hash":"7486880da8e8","status":"todo","ipa":"nˈa","gloss":"נוּן + קָמָץ"},{"id":"syllables/nun-patach","cat":"syllables","text":"נַ","hash":"2b7a446376e1","status":"todo","ipa":"nˈa","gloss":"נוּן + פַּתָח"},{"id":"syllables/nun-chirik","cat":"syllables","text":"נִ","hash":"7e045613b67b","status":"todo","ipa":"nˈi","gloss":"נוּן + חִירִיק"},{"id":"syllables/nun-segol","cat":"syllables","text":"נֶ","hash":"0e0584a3c17f","status":"todo","ipa":"nˈe","gloss":"נוּן + סֶגּוֹל"},{"id":"syllables/nun-tzere","cat":"syllables","text":"נֵ","hash":"3cbde32b4ed6","status":"todo","ipa":"nˈe","gloss":"נוּן + צֵירֵה"},{"id":"syllables/nun-cholam","cat":"syllables","text":"נוֹ","hash":"22ab12bb8c86","status":"todo","ipa":"nˈo","gloss":"נוּן + חוֹלָם"},{"id":"syllables/nun-shuruk","cat":"syllables","text":"נוּ","hash":"d7580e5279cc","status":"todo","ipa":"nˈu","gloss":"נוּן + שׁוּרוּק"},{"id":"syllables/nun-kubutz","cat":"syllables","text":"נֻ","hash":"80eabd3d8db6","status":"todo","ipa":"nˈu","gloss":"נוּן + קֻבּוּץ"},{"id":"syllables/samech-kamatz","cat":"syllables","text":"סָ","hash":"506dc62e546c","status":"todo","ipa":"sˈa","gloss":"סָמֶךְ + קָמָץ"},{"id":"syllables/samech-patach","cat":"syllables","text":"סַ","hash":"d6d99810d929","status":"todo","ipa":"sˈa","gloss":"סָמֶךְ + פַּתָח"},{"id":"syllables/samech-chirik","cat":"syllables","text":"סִ","hash":"c68604a89b7e","status":"todo","ipa":"sˈi","gloss":"סָמֶךְ + חִירִיק"},{"id":"syllables/samech-segol","cat":"syllables","text":"סֶ","hash":"f836bb328ad5","status":"todo","ipa":"sˈe","gloss":"סָמֶךְ + סֶגּוֹל"},{"id":"syllables/samech-tzere","cat":"syllables","text":"סֵ","hash":"f636c50d94ac","status":"todo","ipa":"sˈe","gloss":"סָמֶךְ + צֵירֵה"},{"id":"syllables/samech-cholam","cat":"syllables","text":"סוֹ","hash":"922a1fae1a6e","status":"todo","ipa":"sˈo","gloss":"סָמֶךְ + חוֹלָם"},{"id":"syllables/samech-shuruk","cat":"syllables","text":"סוּ","hash":"8e3fb6534eb8","status":"todo","ipa":"sˈu","gloss":"סָמֶךְ + שׁוּרוּק"},{"id":"syllables/samech-kubutz","cat":"syllables","text":"סֻ","hash":"171afad95930","status":"todo","ipa":"sˈu","gloss":"סָמֶךְ + קֻבּוּץ"},{"id":"syllables/ayin-kamatz","cat":"syllables","text":"עָ","hash":"09b1ac711785","status":"todo","ipa":"ʔˈa","gloss":"עַיִן + קָמָץ"},{"id":"syllables/ayin-patach","cat":"syllables","text":"עַ","hash":"e5b66bfe8ac9","status":"todo","ipa":"ʔˈa","gloss":"עַיִן + פַּתָח"},{"id":"syllables/ayin-chirik","cat":"syllables","text":"עִ","hash":"e279befbb7e9","status":"todo","ipa":"ʔˈi","gloss":"עַיִן + חִירִיק"},{"id":"syllables/ayin-segol","cat":"syllables","text":"עֶ","hash":"f4331d439cf3","status":"todo","ipa":"ʔˈe","gloss":"עַיִן + סֶגּוֹל"},{"id":"syllables/ayin-tzere","cat":"syllables","text":"עֵ","hash":"2e68b8820210","status":"todo","ipa":"ʔˈe","gloss":"עַיִן + צֵירֵה"},{"id":"syllables/ayin-cholam","cat":"syllables","text":"עוֹ","hash":"bbc9e72a0354","status":"todo","ipa":"ʔˈo","gloss":"עַיִן + חוֹלָם"},{"id":"syllables/ayin-shuruk","cat":"syllables","text":"עוּ","hash":"9e536fe050a5","status":"todo","ipa":"ʔˈu","gloss":"עַיִן + שׁוּרוּק"},{"id":"syllables/ayin-kubutz","cat":"syllables","text":"עֻ","hash":"5b40372a93e2","status":"todo","ipa":"ʔˈu","gloss":"עַיִן + קֻבּוּץ"},{"id":"syllables/pe-kamatz","cat":"syllables","text":"פָּ","hash":"773dd722cd9d","status":"todo","ipa":"pˈa","gloss":"פֵּא + קָמָץ"},{"id":"syllables/pe-patach","cat":"syllables","text":"פַּ","hash":"a2fa19b2486d","status":"todo","ipa":"pˈa","gloss":"פֵּא + פַּתָח"},{"id":"syllables/pe-chirik","cat":"syllables","text":"פִּ","hash":"79301076643a","status":"todo","ipa":"pˈi","gloss":"פֵּא + חִירִיק"},{"id":"syllables/pe-segol","cat":"syllables","text":"פֶ","hash":"c22a9c607f3d","status":"todo","ipa":"pˈe","gloss":"פֵּא + סֶגּוֹל"},{"id":"syllables/pe-tzere","cat":"syllables","text":"פֵּ","hash":"f541fec43ed5","status":"todo","ipa":"pˈe","gloss":"פֵּא + צֵירֵה"},{"id":"syllables/pe-cholam","cat":"syllables","text":"פּוֹ","hash":"9eab0cbc8101","status":"todo","ipa":"pˈo","gloss":"פֵּא + חוֹלָם"},{"id":"syllables/pe-shuruk","cat":"syllables","text":"פּוּ","hash":"d17fa8de9a59","status":"todo","ipa":"pˈu","gloss":"פֵּא + שׁוּרוּק"},{"id":"syllables/pe-kubutz","cat":"syllables","text":"פֻּ","hash":"a496fd094d31","status":"todo","ipa":"pˈu","gloss":"פֵּא + קֻבּוּץ"},{"id":"syllables/tsadi-kamatz","cat":"syllables","text":"צָ","hash":"875244836005","status":"todo","ipa":"tsˈa","gloss":"צָדִי + קָמָץ"},{"id":"syllables/tsadi-patach","cat":"syllables","text":"צַ","hash":"1cdded9faf56","status":"todo","ipa":"tsˈa","gloss":"צָדִי + פַּתָח"},{"id":"syllables/tsadi-chirik","cat":"syllables","text":"צִ","hash":"d52ba322b91c","status":"todo","ipa":"tsˈi","gloss":"צָדִי + חִירִיק"},{"id":"syllables/tsadi-segol","cat":"syllables","text":"צֶ","hash":"f6c0d861b573","status":"todo","ipa":"tsˈe","gloss":"צָדִי + סֶגּוֹל"},{"id":"syllables/tsadi-tzere","cat":"syllables","text":"צֵ","hash":"dd50bd31f339","status":"todo","ipa":"tsˈe","gloss":"צָדִי + צֵירֵה"},{"id":"syllables/tsadi-cholam","cat":"syllables","text":"צוֹ","hash":"912a77a71d7f","status":"todo","ipa":"tsˈo","gloss":"צָדִי + חוֹלָם"},{"id":"syllables/tsadi-shuruk","cat":"syllables","text":"צוּ","hash":"9af95c618975","status":"todo","ipa":"tsˈu","gloss":"צָדִי + שׁוּרוּק"},{"id":"syllables/tsadi-kubutz","cat":"syllables","text":"צֻ","hash":"28e75e2f50f2","status":"todo","ipa":"tsˈu","gloss":"צָדִי + קֻבּוּץ"},{"id":"syllables/kof-kamatz","cat":"syllables","text":"קָ","hash":"dc692f20ce44","status":"todo","ipa":"kˈa","gloss":"קוֹף + קָמָץ"},{"id":"syllables/kof-patach","cat":"syllables","text":"קַ","hash":"ec87aef02b2d","status":"todo","ipa":"kˈa","gloss":"קוֹף + פַּתָח"},{"id":"syllables/kof-chirik","cat":"syllables","text":"קִ","hash":"9648c47eb2dc","status":"todo","ipa":"kˈi","gloss":"קוֹף + חִירִיק"},{"id":"syllables/kof-segol","cat":"syllables","text":"קֶ","hash":"1712f267191d","status":"todo","ipa":"kˈe","gloss":"קוֹף + סֶגּוֹל"},{"id":"syllables/kof-tzere","cat":"syllables","text":"קֵ","hash":"efa49fd33346","status":"todo","ipa":"kˈe","gloss":"קוֹף + צֵירֵה"},{"id":"syllables/kof-cholam","cat":"syllables","text":"קוֹ","hash":"122a2bed2bc5","status":"todo","ipa":"kˈo","gloss":"קוֹף + חוֹלָם"},{"id":"syllables/kof-shuruk","cat":"syllables","text":"קוּ","hash":"663dc44082f1","status":"todo","ipa":"kˈu","gloss":"קוֹף + שׁוּרוּק"},{"id":"syllables/kof-kubutz","cat":"syllables","text":"קֻ","hash":"3f183dba1bbc","status":"todo","ipa":"kˈu","gloss":"קוֹף + קֻבּוּץ"},{"id":"syllables/resh-kamatz","cat":"syllables","text":"רָ","hash":"32d458b14866","status":"todo","ipa":"ʁˈa","gloss":"רֵישׁ + קָמָץ"},{"id":"syllables/resh-patach","cat":"syllables","text":"רַ","hash":"8e7d2beec329","status":"todo","ipa":"ʁˈa","gloss":"רֵישׁ + פַּתָח"},{"id":"syllables/resh-chirik","cat":"syllables","text":"רִ","hash":"46b86dfa8faf","status":"todo","ipa":"ʁˈi","gloss":"רֵישׁ + חִירִיק"},{"id":"syllables/resh-segol","cat":"syllables","text":"רֶ","hash":"6fc0fb720566","status":"todo","ipa":"ʁˈe","gloss":"רֵישׁ + סֶגּוֹל"},{"id":"syllables/resh-tzere","cat":"syllables","text":"רֵ","hash":"b83cc080db13","status":"todo","ipa":"ʁˈe","gloss":"רֵישׁ + צֵירֵה"},{"id":"syllables/resh-cholam","cat":"syllables","text":"רוֹ","hash":"6081af87f6e4","status":"todo","ipa":"ʁˈo","gloss":"רֵישׁ + חוֹלָם"},{"id":"syllables/resh-shuruk","cat":"syllables","text":"רוּ","hash":"3de9696d044c","status":"todo","ipa":"ʁˈu","gloss":"רֵישׁ + שׁוּרוּק"},{"id":"syllables/resh-kubutz","cat":"syllables","text":"רֻ","hash":"33b7f61f6b13","status":"todo","ipa":"ʁˈu","gloss":"רֵישׁ + קֻבּוּץ"},{"id":"syllables/shin-kamatz","cat":"syllables","text":"שָׁ","hash":"2c5a0aeefacd","status":"todo","ipa":"ʃˈa","gloss":"שִׁין + קָמָץ"},{"id":"syllables/shin-patach","cat":"syllables","text":"שַׁ","hash":"93723d4f5857","status":"todo","ipa":"ʃˈa","gloss":"שִׁין + פַּתָח"},{"id":"syllables/shin-chirik","cat":"syllables","text":"שִׁ","hash":"4115fbf2041a","status":"todo","ipa":"ʃˈi","gloss":"שִׁין + חִירִיק"},{"id":"syllables/shin-segol","cat":"syllables","text":"שֶׁ","hash":"8d866b616356","status":"todo","ipa":"ʃˈe","gloss":"שִׁין + סֶגּוֹל"},{"id":"syllables/shin-tzere","cat":"syllables","text":"שֵׁ","hash":"9a2e4cf213f6","status":"todo","ipa":"ʃˈe","gloss":"שִׁין + צֵירֵה"},{"id":"syllables/shin-cholam","cat":"syllables","text":"שׁוֹ","hash":"1622dd407086","status":"todo","ipa":"ʃˈo","gloss":"שִׁין + חוֹלָם"},{"id":"syllables/shin-shuruk","cat":"syllables","text":"שׁוּ","hash":"46ea582dc85b","status":"todo","ipa":"ʃˈu","gloss":"שִׁין + שׁוּרוּק"},{"id":"syllables/shin-kubutz","cat":"syllables","text":"שֻׁ","hash":"a7c1643e492c","status":"todo","ipa":"ʃˈu","gloss":"שִׁין + קֻבּוּץ"},{"id":"syllables/tav-kamatz","cat":"syllables","text":"תָּ","hash":"aa36822c8970","status":"todo","ipa":"tˈa","gloss":"תָּו + קָמָץ"},{"id":"syllables/tav-patach","cat":"syllables","text":"תַּ","hash":"6a972cef1a61","status":"todo","ipa":"tˈa","gloss":"תָּו + פַּתָח"},{"id":"syllables/tav-chirik","cat":"syllables","text":"תִּ","hash":"d91e48853542","status":"todo","ipa":"tˈi","gloss":"תָּו + חִירִיק"},{"id":"syllables/tav-segol","cat":"syllables","text":"תֶּ","hash":"51ca9a48ff7b","status":"todo","ipa":"tˈe","gloss":"תָּו + סֶגּוֹל"},{"id":"syllables/tav-tzere","cat":"syllables","text":"תֵּ","hash":"9eea79c59ac4","status":"todo","ipa":"tˈe","gloss":"תָּו + צֵירֵה"},{"id":"syllables/tav-cholam","cat":"syllables","text":"תּוֹ","hash":"68a01508edc2","status":"todo","ipa":"tˈo","gloss":"תָּו + חוֹלָם"},{"id":"syllables/tav-shuruk","cat":"syllables","text":"תּוּ","hash":"cf527b1aa391","status":"todo","ipa":"tˈu","gloss":"תָּו + שׁוּרוּק"},{"id":"syllables/tav-kubutz","cat":"syllables","text":"תֻּ","hash":"1d15faf1fef2","status":"todo","ipa":"tˈu","gloss":"תָּו + קֻבּוּץ"},{"id":"letters/alef","cat":"letters","text":"אָלֶף","hash":"3c3ac3e35fa6","status":"todo"},{"id":"letters/bet","cat":"letters","text":"בֵּית","hash":"2da94d33a54e","status":"todo"},{"id":"letters/gimel","cat":"letters","text":"גִּימֶל","hash":"8fb49afa9fdd","status":"todo"},{"id":"letters/dalet","cat":"letters","text":"דָּלֶת","hash":"becfd64f6db9","status":"todo"},{"id":"letters/he","cat":"letters","text":"הֵא","hash":"a53cb10d639f","status":"todo"},{"id":"letters/vav","cat":"letters","text":"וָו","hash":"970b15f1dfd5","status":"todo"},{"id":"letters/zayin","cat":"letters","text":"זַיִן","hash":"72cdc8f0b4fb","status":"todo"},{"id":"letters/chet","cat":"letters","text":"חֵית","hash":"9138f96ab7da","status":"todo"},{"id":"letters/tet","cat":"letters","text":"טֵית","hash":"73f1ff665545","status":"todo"},{"id":"letters/yod","cat":"letters","text":"יוֹד","hash":"ff3455e9f01a","status":"todo"},{"id":"letters/kaf","cat":"letters","text":"כַּף","hash":"f8929ab11129","status":"todo"},{"id":"letters/lamed","cat":"letters","text":"לָמֶד","hash":"90e6d522e4a9","status":"todo"},{"id":"letters/mem","cat":"letters","text":"מֵם","hash":"da15b8705f9c","status":"todo"},{"id":"letters/nun","cat":"letters","text":"נוּן","hash":"a6f62f319e5a","status":"todo"},{"id":"letters/samech","cat":"letters","text":"סָמֶךְ","hash":"1af0f83fb970","status":"todo"},{"id":"letters/ayin","cat":"letters","text":"עַיִן","hash":"4c10d35fd572","status":"todo"},{"id":"letters/pe","cat":"letters","text":"פֵּא","hash":"e1df53ea8d0a","status":"todo"},{"id":"letters/tsadi","cat":"letters","text":"צָדִי","hash":"0948723612ab","status":"todo"},{"id":"letters/kof","cat":"letters","text":"קוֹף","hash":"052b6d7c7f26","status":"todo"},{"id":"letters/resh","cat":"letters","text":"רֵישׁ","hash":"a1ed895a69ea","status":"todo"},{"id":"letters/shin","cat":"letters","text":"שִׁין","hash":"b980973045ce","status":"todo"},{"id":"letters/tav","cat":"letters","text":"תָּו","hash":"34245f01f0bd","status":"todo"},{"id":"anchors/alef","cat":"anchors","text":"אַבָּא","hash":"787bf52db52a","status":"todo","emoji":"👨"},{"id":"anchors/bet","cat":"anchors","text":"בַּיִת","hash":"e3d8894cf2d0","status":"todo","emoji":"🏠"},{"id":"anchors/gimel","cat":"anchors","text":"גָּמָל","hash":"6920dafa9a56","status":"todo","emoji":"🐪"},{"id":"anchors/dalet","cat":"anchors","text":"דָּג","hash":"eb8b8ff9d901","status":"todo","emoji":"🐟"},{"id":"anchors/he","cat":"anchors","text":"הַר","hash":"694ac70e7076","status":"todo","emoji":"⛰️"},{"id":"anchors/vav","cat":"anchors","text":"וֶרֶד","hash":"2309d153fa9d","status":"todo","emoji":"🌹"},{"id":"anchors/zayin","cat":"anchors","text":"זֶבְּרָה","hash":"128ca18bafe4","status":"todo","emoji":"🦓"},{"id":"anchors/chet","cat":"anchors","text":"חָתוּל","hash":"2064deedf6bf","status":"todo","emoji":"🐈"},{"id":"anchors/tet","cat":"anchors","text":"טַוָּס","hash":"60233bff2f97","status":"todo","emoji":"🦚"},{"id":"anchors/yod","cat":"anchors","text":"יָד","hash":"d6d6810e139e","status":"todo","emoji":"✋"},{"id":"anchors/kaf","cat":"anchors","text":"כֶּלֶב","hash":"4d6868ff3f20","status":"todo","emoji":"🐕"},{"id":"anchors/lamed","cat":"anchors","text":"לֶחֶם","hash":"f059f3a327f9","status":"todo","emoji":"🍞"},{"id":"anchors/mem","cat":"anchors","text":"מַיִם","hash":"f9c5c88383d2","status":"todo","emoji":"💧"},{"id":"anchors/nun","cat":"anchors","text":"נֵר","hash":"5edb880a3929","status":"todo","emoji":"🕯️"},{"id":"anchors/samech","cat":"anchors","text":"סֵפֶר","hash":"2089809d7ee7","status":"todo","emoji":"📖"},{"id":"anchors/ayin","cat":"anchors","text":"עֵץ","hash":"af0decf17c3a","status":"todo","emoji":"🌳"},{"id":"anchors/pe","cat":"anchors","text":"פֶּרַח","hash":"4558cf9de351","status":"todo","emoji":"🌸"},{"id":"anchors/tsadi","cat":"anchors","text":"צָב","hash":"acb76ff7fd09","status":"todo","emoji":"🐢"},{"id":"anchors/kof","cat":"anchors","text":"קוֹף","hash":"052b6d7c7f26","status":"todo","emoji":"🐒"},{"id":"anchors/resh","cat":"anchors","text":"רַכֶּבֶת","hash":"9647b4c3f9a5","status":"todo","emoji":"🚂"},{"id":"anchors/shin","cat":"anchors","text":"שֶׁמֶשׁ","hash":"736e502cab21","status":"todo","emoji":"☀️"},{"id":"anchors/tav","cat":"anchors","text":"תּוּת","hash":"a8323485cc45","status":"todo","emoji":"🍓"},{"id":"words/dag","cat":"words","text":"דָּג","hash":"eb8b8ff9d901","status":"todo","emoji":"🐟","gloss":"fish"},{"id":"words/yad","cat":"words","text":"יָד","hash":"d6d6810e139e","status":"todo","emoji":"✋","gloss":"hand"},{"id":"words/gan","cat":"words","text":"גַּן","hash":"e9285d28fcb8","status":"todo","emoji":"🌷","gloss":"garden / kindergarten"},{"id":"words/gag","cat":"words","text":"גָּג","hash":"b648e5a67146","status":"todo","emoji":"🏠","gloss":"roof"},{"id":"words/av","cat":"words","text":"אָב","hash":"ba560a916a31","status":"todo","emoji":"👨","gloss":"father"},{"id":"words/em","cat":"words","text":"אֵם","hash":"53aa1ad2283a","status":"todo","emoji":"👩","gloss":"mother"},{"id":"words/chag","cat":"words","text":"חַג","hash":"2e5bf2263801","status":"todo","emoji":"🎉","gloss":"holiday"},{"id":"words/har","cat":"words","text":"הַר","hash":"694ac70e7076","status":"todo","emoji":"⛰️","gloss":"mountain"},{"id":"words/shem","cat":"words","text":"שֵׁם","hash":"805c80917f10","status":"todo","emoji":"🏷️","gloss":"name"},{"id":"words/ben","cat":"words","text":"בֵּן","hash":"70042f52995c","status":"todo","emoji":"👦","gloss":"son / boy"},{"id":"words/af","cat":"words","text":"אַף","hash":"ff8a456dfbb1","status":"todo","emoji":"👃","gloss":"nose"},{"id":"words/etz","cat":"words","text":"עֵץ","hash":"af0decf17c3a","status":"todo","emoji":"🌳","gloss":"tree"},{"id":"words/yeled","cat":"words","text":"יֶלֶד","hash":"0386b4125231","status":"todo","emoji":"🧒","gloss":"boy"},{"id":"words/lechem","cat":"words","text":"לֶחֶם","hash":"f059f3a327f9","status":"todo","emoji":"🍞","gloss":"bread"},{"id":"words/kelev","cat":"words","text":"כֶּלֶב","hash":"4d6868ff3f20","status":"todo","emoji":"🐕","gloss":"dog"},{"id":"words/sefer","cat":"words","text":"סֵפֶר","hash":"2089809d7ee7","status":"todo","emoji":"📖","gloss":"book"},{"id":"words/shemesh","cat":"words","text":"שֶׁמֶשׁ","hash":"736e502cab21","status":"todo","emoji":"☀️","gloss":"sun"},{"id":"words/mayim","cat":"words","text":"מַיִם","hash":"f9c5c88383d2","status":"todo","emoji":"💧","gloss":"water"},{"id":"words/bayit","cat":"words","text":"בַּיִת","hash":"e3d8894cf2d0","status":"todo","emoji":"🏡","gloss":"house"},{"id":"words/chalav","cat":"words","text":"חָלָב","hash":"d8973badd2bd","status":"todo","emoji":"🥛","gloss":"milk"},{"id":"words/perach","cat":"words","text":"פֶּרַח","hash":"4558cf9de351","status":"todo","emoji":"🌸","gloss":"flower"},{"id":"words/yareach","cat":"words","text":"יָרֵחַ","hash":"065de374ecb8","status":"todo","emoji":"🌙","gloss":"moon"},{"id":"words/kof","cat":"words","text":"קוֹף","hash":"052b6d7c7f26","status":"todo","emoji":"🐒","gloss":"monkey"},{"id":"words/tut","cat":"words","text":"תּוּת","hash":"a8323485cc45","status":"todo","emoji":"🍓","gloss":"strawberry"},{"id":"praise/kol-hakavod","cat":"praise","text":"כָּל הַכָּבוֹד","hash":"7fc2878d3f10","status":"todo"},{"id":"praise/metsuyan","cat":"praise","text":"מְצֻיָּן","hash":"a145b59c36f2","status":"todo"},{"id":"praise/yofi","cat":"praise","text":"יֹפִי","hash":"a4673cc197ff","status":"todo"},{"id":"praise/eize-kef","cat":"praise","text":"אֵיזֶה כֵּיף","hash":"5ab1ee7c16f8","status":"todo"},{"id":"praise/nase-shuv","cat":"praise","text":"נַסֵּה שׁוּב","hash":"c6aba928f440","status":"todo","address":"m"},{"id":"praise/nase-shuv-f","cat":"praise","text":"נַסִּי שׁוּב","hash":"bf9c063804b5","status":"todo","address":"f"},{"id":"praise/find-letter","cat":"praise","text":"אֵיפֹה הָאוֹת","hash":"7600a27b90c8","status":"todo"},{"id":"praise/build-word","cat":"praise","text":"בּוֹא נִבְנֶה מִלָּה","hash":"6d6a8d1d1555","status":"todo","address":"m"},{"id":"praise/build-word-f","cat":"praise","text":"בּוֹאִי נִבְנֶה מִלָּה","hash":"eff5a1954116","status":"todo","address":"f"},{"id":"praise/sticker-earned","cat":"praise","text":"קִבַּלְתָּ מַדְבֵּקָה","hash":"be5e67e3f16e","status":"todo","address":"m"},{"id":"praise/sticker-earned-f","cat":"praise","text":"קִבַּלְתְּ מַדְבֵּקָה","hash":"f218fb20ac26","status":"todo","address":"f"},{"id":"praise/which-letter-starts","cat":"praise","text":"בְּאֵיזוֹ אוֹת מַתְחִילָה הַמִּלָּה","hash":"c5df9bd2a205","status":"todo"},{"id":"praise/practice-more","cat":"praise","text":"בּוֹא נְתַרְגֵּל עוֹד קְצָת","hash":"f7576a147709","status":"todo","address":"m"},{"id":"praise/practice-more-f","cat":"praise","text":"בּוֹאִי נְתַרְגֵּל עוֹד קְצָת","hash":"c2539e17832e","status":"todo","address":"f"},{"id":"praise/daily-done","cat":"praise","text":"מָצָאתָ אֶת הָאוֹצָר שֶׁל הַיּוֹם! בּוֹא מָחָר לְאוֹצָר חָדָשׁ","hash":"ecb613892b50","status":"todo","address":"m"},{"id":"praise/daily-done-f","cat":"praise","text":"מָצָאת אֶת הָאוֹצָר שֶׁל הַיּוֹם! בּוֹאִי מָחָר לְאוֹצָר חָדָשׁ","hash":"3b3123a93886","status":"todo","address":"f"},{"id":"regions/1","cat":"regions","text":"חוֹף הָאוֹתִיּוֹת","hash":"e54b0bf70c10","status":"todo","emoji":"🏖️"},{"id":"regions/2","cat":"regions","text":"הַר הַסּוֹפִיּוֹת","hash":"e6a0d7c3808d","status":"todo","emoji":"⛰️"},{"id":"regions/3","cat":"regions","text":"יַעַר הַהֲבָרוֹת","hash":"fbe367114b8e","status":"todo","emoji":"🌲"},{"id":"regions/4","cat":"regions","text":"אֲגַם הַמִּלִּים","hash":"4df87cb48ec8","status":"todo","emoji":"🏞️"},{"id":"regions/5","cat":"regions","text":"עִיר הַמִּלִּים","hash":"10f1b8a66de9","status":"todo","emoji":"🏙️"}]}</script>
+<script>
+(() => {
+  'use strict';
+  const S = JSON.parse(document.getElementById('strings').textContent);
+  const DATA = JSON.parse(document.getElementById('studio').textContent);
+  const CLIPS = DATA.clips;
+  const BY_ID = new Map(CLIPS.map((c) => [c.id, c]));
+  const CATS = [...new Set(CLIPS.map((c) => c.cat))];
+  const $ = (id) => document.getElementById(id);
+  const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+  const NEEDS = new Set(['todo', 'changed', 'redo']);
+
+  // ---------------------------------------------------------------- storage
+  // Takes are kept on this device between visits, as a convenience. Sending is
+  // what makes them safe, so the page works (and says so) without storage.
+  let db = null;
+  const openDb = () => new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('voice-studio', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('takes', { keyPath: 'id' });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch { resolve(null); }
+  });
+  const store = (mode, fn) => new Promise((resolve) => {
+    if (!db) return resolve(null);
+    try {
+      const t = db.transaction('takes', mode);
+      const req = fn(t.objectStore('takes'));
+      t.oncomplete = () => resolve(req ? req.result : null);
+      t.onerror = t.onabort = () => resolve(null);
+    } catch { resolve(null); }
+  });
+
+  /** id -> {id, hash, buf, mime, recordedAt, ms, sent} */
+  const takes = new Map();
+
+  /** A take counts only if it answers the text on screen now, and any redo request. */
+  const localTake = (c) => {
+    const t = takes.get(c.id);
+    if (!t || t.hash !== c.hash) return null;
+    if (c.redoAt && t.recordedAt <= c.redoAt) return null;
+    return t;
+  };
+  const statusOf = (c) => {
+    const t = localTake(c);
+    if (t) return t.sent ? 'done' : 'kept';
+    return c.status;
+  };
+  const unsent = () => CLIPS.filter((c) => statusOf(c) === 'kept');
+
+  // ------------------------------------------------------------------ state
+  let current = null;
+  let filter = 'left';
+  let phase = 'idle'; // idle | recording | review
+  let pending = null; // {blob, ms, mime, url, at}
+  let peak = 0;
+
+  const nextNeeding = (fromIdx) => {
+    for (let k = 1; k <= CLIPS.length; k++) {
+      const c = CLIPS[(fromIdx + k + CLIPS.length) % CLIPS.length];
+      if (NEEDS.has(statusOf(c))) return c.id;
+    }
+    return null;
+  };
+  const indexOf = (id) => CLIPS.findIndex((c) => c.id === id);
+
+  // --------------------------------------------------------------- recorder
+  const MIME = (() => {
+    if (typeof MediaRecorder === 'undefined') return null;
+    for (const m of ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm']) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m; } catch { /* keep looking */ }
+    }
+    return '';
+  })();
+  let stream = null;
+  let analyser = null;
+  let audioCtx = null;
+  let rec = null;
+  let chunks = [];
+  let t0 = 0;
+  let recAt = 0;
+  let raf = 0;
+  let autoStop = 0;
+  const player = new Audio();
+
+  const ensureMic = async () => {
+    if (stream) return true;
+    if (!navigator.mediaDevices?.getUserMedia || MIME === null) { banner(S.micMissing); return false; }
+    try {
+      // Raw signal: the browser's voice-call processing smears half-second
+      // syllables. Loudness is evened out on import.
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
+      });
+    } catch {
+      banner(S.micDenied);
+      return false;
+    }
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      audioCtx.createMediaStreamSource(stream).connect(analyser);
+    } catch { analyser = null; }
+    try { await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
+    return true;
+  };
+
+  const meter = () => {
+    const bar = $('level-fill');
+    if (!analyser) return;
+    const buf = new Float32Array(analyser.fftSize);
+    const tick = () => {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (const v of buf) {
+        sum += v * v;
+        const a = Math.abs(v);
+        if (a > peak) peak = a;
+      }
+      bar.style.inlineSize = `${Math.min(100, Math.sqrt(sum / buf.length) * 400)}%`;
+      if (phase === 'recording') raf = requestAnimationFrame(tick);
+      else bar.style.inlineSize = '0%';
+    };
+    tick();
+  };
+
+  const startRecording = async () => {
+    if (!(await ensureMic())) return;
+    if (audioCtx?.state === 'suspended') { try { await audioCtx.resume(); } catch { /* meter only */ } }
+    player.pause();
+    discardPending();
+    chunks = [];
+    peak = 0;
+    const opts = { audioBitsPerSecond: 128000 };
+    if (MIME) opts.mimeType = MIME;
+    try { rec = new MediaRecorder(stream, opts); } catch { rec = new MediaRecorder(stream); }
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = stopped;
+    recAt = Date.now();
+    rec.start();
+    t0 = performance.now();
+    phase = 'recording';
+    render();
+    meter();
+    autoStop = setTimeout(stopRecording, 12000);
+  };
+
+  const stopRecording = () => {
+    clearTimeout(autoStop);
+    cancelAnimationFrame(raf);
+    if (rec && rec.state === 'recording') rec.stop();
+  };
+
+  const stopped = () => {
+    const mime = rec.mimeType || MIME || 'audio/webm';
+    const blob = new Blob(chunks, { type: mime });
+    pending = { blob, mime, ms: Math.round(performance.now() - t0), url: URL.createObjectURL(blob), at: recAt };
+    phase = 'review';
+    render();
+    play();
+  };
+
+  const discardPending = () => {
+    if (pending) URL.revokeObjectURL(pending.url);
+    pending = null;
+  };
+
+  const play = () => {
+    const src = pending ? pending.url : null;
+    if (!src) return;
+    player.src = src;
+    player.play().catch(() => { /* the Play button is right there */ });
+  };
+
+  const keep = async () => {
+    if (!pending) return;
+    const c = BY_ID.get(current);
+    const take = {
+      id: c.id, hash: c.hash, buf: await pending.blob.arrayBuffer(), mime: pending.mime,
+      recordedAt: pending.at, ms: pending.ms, sent: false,
+    };
+    takes.set(c.id, take);
+    await store('readwrite', (s) => s.put(take));
+    discardPending();
+    phase = 'idle';
+    current = nextNeeding(indexOf(c.id)) ?? c.id;
+    render();
+  };
+
+  // ------------------------------------------------------------------- send
+  const b64 = (buf) => {
+    const bytes = new Uint8Array(buf);
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  const stamp = () => {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  };
+  const download = (file) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = file.name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  };
+  const markSent = async (list) => {
+    for (const t of list) {
+      t.sent = true;
+      await store('readwrite', (s) => s.put(t));
+    }
+  };
+
+  // Everything before navigator.share stays synchronous: browsers only open
+  // the share sheet inside the tap that asked for it.
+  const send = (all) => {
+    const list = CLIPS.map(localTake).filter((t) => t && (all || !t.sent));
+    if (!list.length) return toast(S.nothingToSend);
+    const payload = {
+      format: 'voice-takes/1',
+      studioVersion: DATA.version,
+      takes: list.map((t) => ({ id: t.id, hash: t.hash, mime: t.mime, recordedAt: t.recordedAt, ms: t.ms, b64: b64(t.buf) })),
+    };
+    const file = new File([JSON.stringify(payload)], `voice-takes-${stamp()}.json`, { type: 'application/json' });
+    const phone = matchMedia('(pointer: coarse)').matches;
+    if (phone && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] })
+        .then(async () => { await markSent(list); toast(S.sentShare); render(); })
+        .catch(async (e) => {
+          if (e && e.name === 'AbortError') return;
+          download(file);
+          await markSent(list);
+          toast(S.sentDownload);
+          render();
+        });
+      return;
+    }
+    download(file);
+    markSent(list).then(() => { toast(S.sentDownload); render(); });
+  };
+
+  // ----------------------------------------------------------------- render
+  const lengthOf = (text) => {
+    const letters = text.replace(/[֑-ׇ]/g, '').length;
+    return letters <= 4 ? 'short' : letters <= 10 ? 'medium' : 'long';
+  };
+  const setText = (id, text) => {
+    const el = $(id);
+    el.textContent = text || '';
+    el.hidden = !text;
+  };
+
+  const renderBar = () => {
+    const done = CLIPS.filter((c) => !NEEDS.has(statusOf(c))).length;
+    $('progress').textContent = fill(S.progress, { done, total: CLIPS.length });
+    $('track-fill').style.inlineSize = `${(done / CLIPS.length) * 100}%`;
+    const n = unsent().length;
+    $('send').disabled = n === 0;
+    $('send-count').textContent = n ? String(n) : '';
+    $('send-count').hidden = !n;
+    $('sendbox').hidden = n === 0;
+    $('send-note').textContent = `${fill(S.waiting, { n })}. ${S.sendNote}`;
+    $('on-air').classList.toggle('live', phase === 'recording');
+  };
+
+  const renderBooth = () => {
+    const c = BY_ID.get(current);
+    const inCat = CLIPS.filter((x) => x.cat === c.cat);
+    $('eyebrow').textContent = `${S.categories[c.cat] ?? c.cat} · ${fill(S.position, { i: inCat.indexOf(c) + 1, n: inCat.length })}`;
+    const status = statusOf(c);
+    $('pill').dataset.status = status;
+    $('pill').textContent = S.status[status];
+    const item = $('item');
+    item.textContent = c.text;
+    item.dataset.len = lengthOf(c.text);
+    setText('emoji', c.emoji);
+    const gloss = $('gloss');
+    gloss.textContent = c.gloss || '';
+    gloss.hidden = !c.gloss;
+    gloss.className = /[א-ת]/.test(c.gloss || '') ? 'gloss-he' : '';
+    setText('ipa', c.ipa ? `/${c.ipa}/` : '');
+    setText('addr', c.address ? S.address[c.address] : '');
+    setText('note', status === 'redo' && c.note ? `${S.note} ${c.note}` : '');
+    setText('hint', S.hints[c.cat]);
+
+    const recBtn = $('rec');
+    recBtn.setAttribute('aria-pressed', String(phase === 'recording'));
+    recBtn.setAttribute('aria-label', phase === 'recording' ? S.stop : S.record);
+    $('rec-label').textContent = phase === 'recording' ? S.recording : S.record;
+    $('review').hidden = phase !== 'review';
+    let warn = '';
+    if (phase === 'review' && analyser) {
+      if (peak >= 0.99) warn = S.tooLoud;
+      else if (peak < 0.03) warn = S.tooQuiet;
+    }
+    setText('warn', warn);
+  };
+
+  const renderList = () => {
+    const groups = $('groups');
+    groups.textContent = '';
+    for (const cat of CATS) {
+      const all = CLIPS.filter((c) => c.cat === cat);
+      const left = all.filter((c) => NEEDS.has(statusOf(c)));
+      const shown = filter === 'all' ? all : left;
+      const section = document.createElement('section');
+      section.className = 'group';
+      const h = document.createElement('h2');
+      h.textContent = S.categories[cat] ?? cat;
+      const count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = fill(S.progress, { done: all.length - left.length, total: all.length });
+      h.append(count);
+      section.append(h);
+      if (!shown.length) {
+        const p = document.createElement('p');
+        p.className = 'done-all';
+        p.textContent = '✓';
+        section.append(p);
+      } else {
+        const chips = document.createElement('div');
+        chips.className = 'chips';
+        for (const c of shown) {
+          const b = document.createElement('button');
+          b.className = lengthOf(c.text) === 'long' ? 'chip long' : 'chip';
+          b.textContent = c.text;
+          b.dataset.status = statusOf(c);
+          b.dataset.id = c.id;
+          b.setAttribute('aria-current', String(c.id === current));
+          b.title = S.status[statusOf(c)];
+          chips.append(b);
+        }
+        section.append(chips);
+      }
+      groups.append(section);
+    }
+  };
+
+  const render = () => { renderBar(); renderBooth(); renderList(); };
+
+  let toastTimer = 0;
+  const toast = (msg) => {
+    const t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  };
+  const banner = (msg) => { setText('banner', msg); };
+
+  const select = (id) => {
+    if (phase === 'recording') return;
+    player.pause();
+    discardPending();
+    phase = 'idle';
+    current = id;
+    render();
+    $('item').scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+
+  // ------------------------------------------------------------------ wiring
+  const staticText = () => {
+    document.title = S.docTitle;
+    $('title').textContent = S.docTitle;
+    $('intro').textContent = S.intro;
+    $('how-title').textContent = S.howTitle;
+    const ex = DATA.examples;
+    const list = $('how-list');
+    for (const line of S.how) {
+      const li = document.createElement('li');
+      // The examples are Hebrew from src/data; set them in the glyph face.
+      for (const part of line.split(/(\{\w+\})/)) {
+        const key = /^\{(\w+)\}$/.exec(part)?.[1];
+        if (key && ex[key]) {
+          const span = document.createElement('span');
+          span.className = 'heb';
+          span.textContent = ex[key];
+          li.append(span);
+        } else li.append(part);
+      }
+      list.append(li);
+    }
+    $('send-label').textContent = S.send;
+    $('send-all').textContent = S.sendAll;
+    $('again').textContent = S.again;
+    $('play').textContent = `▶ ${S.play}`;
+    $('keep').textContent = S.keep;
+    $('prev').textContent = S.prev;
+    $('skip').textContent = S.skip;
+    $('f-left').textContent = S.filterLeft;
+    $('f-all').textContent = S.filterAll;
+  };
+
+  $('rec').addEventListener('click', () => (phase === 'recording' ? stopRecording() : startRecording()));
+  $('again').addEventListener('click', startRecording);
+  $('play').addEventListener('click', play);
+  $('keep').addEventListener('click', keep);
+  $('send').addEventListener('click', () => send(false));
+  $('send-all').addEventListener('click', () => send(true));
+  $('prev').addEventListener('click', () => select(CLIPS[(indexOf(current) - 1 + CLIPS.length) % CLIPS.length].id));
+  $('skip').addEventListener('click', () => select(nextNeeding(indexOf(current)) ?? CLIPS[(indexOf(current) + 1) % CLIPS.length].id));
+  $('groups').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (chip) select(chip.dataset.id);
+  });
+  const setFilter = (f) => {
+    filter = f;
+    $('f-left').setAttribute('aria-pressed', String(f === 'left'));
+    $('f-all').setAttribute('aria-pressed', String(f === 'all'));
+    renderList();
+  };
+  $('f-left').addEventListener('click', () => setFilter('left'));
+  $('f-all').addEventListener('click', () => setFilter('all'));
+  // On a laptop: Space records and stops, Enter keeps.
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest && e.target.closest('button, summary, input, textarea')) return;
+    if (e.code === 'Space') { e.preventDefault(); $('rec').click(); }
+    else if (e.key === 'Enter' && phase === 'review') { e.preventDefault(); keep(); }
+  });
+
+  const boot = async () => {
+    staticText();
+    db = await openDb();
+    if (!db) banner(S.noStorage);
+    const saved = (await store('readonly', (s) => s.getAll())) || [];
+    for (const t of saved) takes.set(t.id, t);
+    current = nextNeeding(-1) ?? CLIPS[0].id;
+    $('how').open = !CLIPS.some((c) => localTake(c)) && CLIPS.every((c) => c.status !== 'done');
+    if (!nextNeeding(-1)) toast(S.allDone);
+    render();
+  };
+  boot();
+})();
+</script>
+</body>
+</html>
